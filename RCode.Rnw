@@ -1,0 +1,948 @@
+\documentclass{article}
+\usepackage[margin=1.0in]{geometry}  %To set margins
+\usepackage{amsmath}                 %This allows me to use the align functionality. 
+\usepackage{amsfonts}                %Math font
+\usepackage[shortlabels]{enumitem}   %For enumerated lists with labels specified
+                                     %We had to run tlmgr_install("enumitem") in R 
+\usepackage{hyperref}                %For including hyperlinks
+\usepackage{float}                   %For telling R where to put a table/figure 
+\usepackage{natbib}                  %For the bibliography 
+\usepackage{parskip}                 %Prevents indents
+\usepackage{xcolor}                  %Color text
+\usepackage{graphicx}
+\bibliographystyle{apalike}          %For the bibliography 
+
+\begin{document}
+	
+	\huge
+	\begin{center}
+		\textbf{MTH-245 Final Project}
+	\end{center}
+	
+	\normalsize
+  \begin{center}
+  Maria Balderas and Pratik Shrestha
+  \end{center}
+  
+  \begin{center}
+  Dr. Kevin Hutson - Spring 2023
+  \end{center}
+  
+\large
+\vspace{.3cm}
+\renewcommand{\contentsname}{Table of Contents}
+\tableofcontents %This command will generate a table of contents based on your document's sections and subsections.
+
+\newpage
+\section{Abstract}
+
+\textbf{Background:} The National Basketball Association (NBA) is a professional basketball league with 29 teams in the United States and Canada, with a regular season running from October till April, consisting of 82 games in total. Having so many games in a season makes one wonder what variables predict a win and which ones do not. Therefore, the objective of this study was to create a model that best predicts a win in an NBA basketball game.
+
+\textbf{Methods:} The study utilized multiple linear regression to model the relationship between Wins and various independent variables such as PTS, oppPTS, FG, FGA, X2P, X2PA, X3P, X3PA, FT, FTA, ORB, DRB, AST, STL, BLK, and TOV. The dataset was adjusted, and several models were created to identify the model with the most significant decrease in variance inflation factors (VIFs).
+
+\textbf{Bottom Line:} After analyzing the data, it was found that the model where explanatory variables were centered and scaled, and RFG and RX2P were taken out had the most significant decrease in VIFs. This suggests that these variables had the least impact on the model and could be excluded. The final model identified the significant predictors of a win in an NBA game, which included PTS, oppPTS, FG, FGA, X2P, X2PA, X3P, X3PA, FT, FTA, ORB, DRB, AST, STL, BLK, and TOV. This model provides a useful tool for coaches and players to make strategic decisions that may increase their chances of winning. In conclusion, this study aimed to identify the factors that predict a win in an NBA game by creating a model through multiple linear regression analysis. The final model identified the significant predictors of a win in an NBA game and provides valuable insights that can be used to make informed decisions by coaches and players.un
+
+\newpage
+\section{Introduction}
+
+The success of Furman’s basketball team this season sparked our interest in understanding what makes a basketball team successful. We wanted to identify the predictor variables that have the most influence on a team’s wins. Initially, we thought college basketball was a good place to start looking for data, but then we found data from the National Basketball Associations (NBA) teams, a professional basketball league in the United States and Canada. 
+
+We selected the NBA dataset because it covers a wide range of years and includes multiple variables. Additionally, as a national professional organization, the dataset can be applied to real-world scenarios, helping coaches and players to improve in areas that can potentially help with more wins and playoff appearances. 
+
+Another reason why we chose this over college basketball data is because the NBA only has 29 teams, while Division I college basketball has over 300 basketball teams, and multiple conferences, adding  more confounding variables that could potentially affect our analysis. In order to answer some questions that we have, we will create a multiple linear regression model to predict wins. 
+
+\subsection{The Data}
+
+The data used in the project was found on the Massachusetts Institute of Technology website  that contains  every season from every NBA team from 1980 to 2011-2012, but it excludes teams who did not have 82 games.  It comprises 835 observations and 17 variables( a combination of sixteen discrete quantitative and one categorical variable. Below there is a preview of the dataset. 
+
+<<>>=
+library(tidyverse)
+library(patchwork)
+nba <- read.csv("~/Documents/Before US/Data For Financial Edge/Unit 2/nba.csv")
+nba %>% head(10)
+@
+
+\subsection{Data Descriptions}
+
+There is only one categorical variable in this dataset which is \textit{Playoffs}. The following information indicates the category of this variable. 
+\begin{itemize}
+  \item \textbf{Playoffs:} The only categorical variable is whether a team made it into the playoffs or not. With 0 meaning  that the team didn’t make it and 1 meaning that they did make it into the playoffs. 
+\end{itemize}
+
+The remaining variables are discrete quantitative.
+
+\begin{itemize}
+  \item \textbf{Defensive Rebounds (DRB):} A \textit{defensive rebound} is a rebound made by a player on defense. It is measured by the number of defensive rebounds a team gets  in that season.
+  \item \textbf{Blocks(BLK):} A \textit{block} is where a defensive player deflects a shot attempt from an offensive player to prevent a score. This was measured by the total number of blocks a team successfully attempted during the season.
+  \item \textbf{Points scored during regular season(PTS):} \textit{Points scored during regular season} is measured by the number of points a team scores during a regular basketball season.
+  \item \textbf{Opponent points scored during the season(oppPTS):} \textit{Opponent points scored during the season} is the total number of points scored by the opposing teams during each season. 
+  \item \textbf{Successful field goals (FG):} \textit{Successful field goals} are any shots scored other than a free throw, these shots scored can range between 2-3 points depending on the location where it is shot. This is measured by the number of successful field baskets made during the season. 
+  \item \textbf{Field Goals Attempted (FGA):} \textit{Attempted field goals} are any attempted baskets other than free throws in the seasons. It is measured by the number of successful field goals and unsuccessful field goals during the season. 
+  \item \textbf{Successful Two Pointers (X2P):} \textit{Successful two pointers} is a basket scored anywhere inside the three-point arc. All the successful attempts inside the three-point arc are worth two points and are added to the total points of the team within its season. The number of two pointers is what was added to the data set.
+  \item \textbf{Two pointers attempted (X2PA):} \textit{Two pointers attempted} is any attempt to score a basket from anywhere inside the three point arc. This includes successful and unsuccessful baskets. The total count of attempted two pointers is added to the total in the dataset.
+  \item \textbf{Successful three pointers (X3PA):} \textit{Successful three pointers} refers to a successful shot that is made beyond the three-point arc. All the successful attempts outside the 
+three-point arc are worth three points and added to the total points of the team within its season. The number of three pointers is what was added to the data set. 
+  \item \textbf{Three pointers attempted (X3PA):} \textit{Three pointers attempted} is any attempt to score a basket from anywhere outisde the thee point arc. This includes successful and unsuccessful baskets.The total count of attempted three pointers is added to the total in the dataset. 
+  \item \textbf{Successful free throws(FT):} A \textit{successful free throw} A free throw is usually a scoring attempt since the defense is not allowed to interfere with the shot. Free throws are usually given after a foul and are worth one point. A successful free throw are free throws that successfully made it into the baskets. The number of successful free shows are added to the season total. 
+  \item \textbf{Attempted free throws(FTA):} \textit{Attempted free throws} refers to the number of free throws attempted by a team during the season. 
+  \item \textbf{Offensive Rebound(ORB):} \textit{Offensive rebound} is where a player from the offensive team retrieves the ball from an unsuccessful shot attempt by their own team. This is measured by the number of times a team member is able to retrieve a ball from missed attempts. 
+  \item \textbf{Assist(AST):} An \textit{assist} is where a player passes the ball to another teammate in order to score. This is measured by the number of assists in each season. 
+  \item \textbf{Steals(STL):} A \textit{steal} is where a defensive player takes possession of the ball from the opposing team. Steal is measured by the number of steals within the season. 
+  \item \textbf{Turnovers(TOV):} \textit{Turnovers} happen whenever an offensive player loses ball possession not including taking a shot or causing a foul. Turnovers are measured by the amount of turnovers within the season. 
+
+\end{itemize}
+
+\subsection{Summary Statistics}
+
+The summary statistics of the response variable \textit{Wins(W)} was evaluated. 
+
+<<>>=
+summary(nba$W)
+@
+
+The response variable,\textit{Wins (W)} which is measured by the amount of wins the team has each season. There are 82 games in each NBA season, and after each game the team with the highest score receives the win which is added to the win total for that season. The summary statistics point out that the mean and median are close in value meaning that the data is fairly evenly distributed. Even though the mean and median are similar, there can still be variations. 
+
+The summary statistics of the rest of the variables is shown below.
+
+<<>>=
+summary(nba)
+@
+
+The explanatory variables all have different summary statistics from one another but there was an issue when evaluating some variables. 
+<<>>=
+library(GGally)
+ggpairs(nba, columns = 5:14)
+@
+
+When we evaluated the variables, we noticed that there's a strong correlation ($>$=0.70) among \textit{FG,FGA, X2P,X2PA, X3P,X3PA, FT,FTA} independent variables. For \textit{FG} and \textit{FGA} the correlation is 0.879, \textit{X2P} and \textit{X2PA} the correlation is 0.965, \textit{X3P} and \text{X3PA} the correlation is 0.994, \textit{FT} and \textit{FTA} the correlation is 0.950. These variables are high correlated which could cause issues if we did not create the ratio.
+
+
+We decided to ratio the variables of \textit{FG,FGA, X2P,X2PA, X3P,X3PA, FT,FTA} into \textit{FG/FGA(RFG), X2P/X2PA(RX2P), X3P/X3PA(RX3P) and FT/FTA(RFT)}. In the summary below it shows the ratio variables into new columns. 
+
+<<>>=
+nba <- nba %>% mutate(RFG = FG/FGA, RX2P = X2P/X2PA, RX3P = X3P/X3PA, RFT = FT/FTA)
+summary(nba)
+@
+
+
+\newpage
+\section{Exploratory Analysis}
+\subsection{Visualizing the Variables}
+
+In this section, data visualizations were made in order to show the distributions of each variable including response and explanatory variables. 
+
+\subsubsection{Histograms of Response Variable}
+
+<<plot.1, eval=FALSE, echo=FALSE>>=
+nba %>%
+  ggplot(aes(x=W)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Wins") +
+  ylab("Frequency")+
+  ggtitle("Frequencies of Wins",
+          subtitle = "NBA")
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.1>>
+@
+
+\caption{A histogram of frequencies of Wins}
+\label{plot.1}
+\end{figure}
+
+\begin{center}
+From Figure 1, one can see that the response variable's distribution is normally distributed
+\end{center}
+
+\subsubsection{Histograms of the Predictors}
+
+After examining the distribution of the response variable, we will now examine the distribution of the explanatory variables which are all discrete quantitative
+
+<<echo=FALSE>>=
+fig <- nba %>% 
+  ggplot(aes(x=BLK)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Blocks (BLK)") +
+  ylab("Frequencies")+
+  ggtitle("Blocks (BLK)",
+          subtitle = "NBA Data") +
+  theme(plot.title = element_text(size = 10))+
+  theme(plot.subtitle = element_text(size = 10))+
+  theme(axis.title.x = element_text(size = 10))
+
+  
+figg <- nba %>% 
+  ggplot(aes(x=TOV)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Turnovers (TOV)") +
+  ylab("Frequencies")+
+  ggtitle("Turnovers (TOV)",
+          subtitle = "NBA Data") + 
+  theme(plot.title = element_text(size = 10)) + 
+  theme(plot.subtitle = element_text(size = 10)) +
+  theme(axis.title.x = element_text(size = 10))
+
+@
+
+<<plot.2, eval=FALSE, echo=FALSE>>=
+fig + figg
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.2>>
+@
+
+\caption{A histogram of frequencies of BLK and TOV}
+\label{plot.2}
+\end{figure}
+
+\begin{center}
+Figure 2: Shows that the histograms of \textit{Blocks(BLK)} and \textit{Turnovers(TOV)} are both normally distributed.
+\end{center}
+
+<<echo=FALSE>>=
+fig1 <- nba %>% 
+  ggplot(aes(x=STL)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Steal (STL)") +
+  ylab("Frequencies")+
+  ggtitle("Steal (STL)",
+          subtitle = "NBA Data") +
+  theme(plot.title = element_text(size = 10))+
+  theme(plot.subtitle = element_text(size = 10))+
+  theme(axis.title.x = element_text(size = 10))
+
+  
+fig2 <- nba %>% 
+  ggplot(aes(x=AST)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Assist (AST)") +
+  ylab("Frequencies")+
+  ggtitle("Assist (AST)",
+          subtitle = "NBA Data") + 
+  theme(plot.title = element_text(size = 10)) + 
+  theme(plot.subtitle = element_text(size = 10)) +
+  theme(axis.title.x = element_text(size = 10))
+
+@
+
+<<plot.3, eval=FALSE, echo=FALSE>>=
+fig1 + fig2
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.3>>
+@
+
+\caption{A histogram of frequencies of STL and AST}
+\label{plot.3}
+\end{figure}
+
+\begin{center}
+Figure 3: Shows that \textit{Steal(STL)} and \textit{Assist(AST)} are normally distributed. 
+\end{center}
+
+<<echo=FALSE>>=
+fig1 <- nba %>% 
+  ggplot(aes(x=DRB)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Defensive Rebounds (DRB)") +
+  ylab("Frequencies")+
+  ggtitle("Defensive Rebounds (DRB)",
+          subtitle = "NBA Data") +
+  theme(plot.title = element_text(size = 10))+
+  theme(plot.subtitle = element_text(size = 10))+
+  theme(axis.title.x = element_text(size = 10))
+
+  
+fig2 <- nba %>% 
+  ggplot(aes(x=ORB)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Offensive Rebounds (ORB)") +
+  ylab("Frequencies")+
+  ggtitle("Offensive Rebounds (ORB)",
+          subtitle = "NBA Data") + 
+  theme(plot.title = element_text(size = 10)) + 
+  theme(plot.subtitle = element_text(size = 10)) +
+  theme(axis.title.x = element_text(size = 10))
+
+@
+
+<<plot.4, eval=FALSE, echo=FALSE>>=
+fig1 + fig2
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.4>>
+@
+
+\caption{A histogram of frequencies of DRB and ORB}
+\label{plot.4}
+\end{figure}
+
+\begin{center}
+Figure 4: Shows that \textit{Defensive Rebounds(DRB)} and \textit{Offensive Rebounds(ORB)} are normally distributed.
+\end{center}
+
+<<echo=FALSE>>=
+fig1 <- nba %>% 
+  ggplot(aes(x=PTS)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Points scored in a season
+       (PTS)") +
+  ylab("Frequencies")+
+  ggtitle("Points scored in a season
+       (PTS)",
+          subtitle = "NBA Data") +
+  theme(plot.title = element_text(size = 10))+
+  theme(plot.subtitle = element_text(size = 10))+
+  theme(axis.title.x = element_text(size = 10))
+
+  
+fig2 <- nba %>% 
+  ggplot(aes(x=oppPTS)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Opponent Points scored 
+       in a season (oppPTS)") +
+  ylab("Frequencies")+
+  ggtitle("Opponent Points scored 
+       in a season (oppPTS))",
+          subtitle = "NBA Data") + 
+  theme(plot.title = element_text(size = 10)) + 
+  theme(plot.subtitle = element_text(size = 10)) +
+  theme(axis.title.x = element_text(size = 10))
+
+@
+
+<<plot.5, eval=FALSE, echo=FALSE>>=
+fig1 + fig2
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.5>>
+@
+
+\caption{A histogram of frequencies of PTS and oppPTS}
+\label{plot.5}
+\end{figure}
+
+\begin{center}
+Figure 5: Shows that \textit{Points scored in a season (PTS)} and \textit{Opponent Points scored in a season(oppPTS)} are normally distributed. 
+\end{center}
+
+<<echo=FALSE>>=
+fig1 <- nba %>% 
+  ggplot(aes(x=RFG)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Ratio of Successful and 
+       Attempted Field Goals
+       (RFG)") +
+  ylab("Frequencies")+
+  ggtitle("Ratio of Successful and
+          Attempted Field Goals
+          (RFG)",
+          subtitle = "NBA Data") +
+  theme(plot.title = element_text(size = 10))+
+  theme(plot.subtitle = element_text(size = 10))+
+  theme(axis.title.x = element_text(size = 10))
+
+  
+fig2 <- nba %>% 
+  ggplot(aes(x=RFT)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Ratio of Successful and
+       Attempted Free Throws
+       (RFT)") +
+  ylab("Frequencies")+
+  ggtitle("Ratio of Successful and
+          Attempted Free Throws
+          (RFT)",
+          subtitle = "NBA Data") + 
+  theme(plot.title = element_text(size = 10)) + 
+  theme(plot.subtitle = element_text(size = 10)) +
+  theme(axis.title.x = element_text(size = 10))
+
+@
+
+<<plot.6, eval=FALSE, echo=FALSE>>=
+fig1 + fig2
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.6>>
+@
+
+\caption{A histogram of frequencies of RFG and RFT}
+\label{plot.6}
+\end{figure}
+
+\begin{center}
+Figure 6: Shows that \textit{Ratio of Successful and Attempted Field Goals(RFG)} and \textit{Ratio of Succcessful and Attempted Free Throws} are normally distributed. 
+\end{center}
+
+<<echo=FALSE>>=
+fig1 <- nba %>% 
+  ggplot(aes(x=RX2P)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Ratio of Successful and
+       Attempted Two Pointers
+       (RX2P)") +
+  ylab("Frequencies")+
+  ggtitle("Ratio of Successful and
+          Attempted Field Goals
+          (RX2P)",
+          subtitle = "NBA Data") +
+  theme(plot.title = element_text(size = 10))+
+  theme(plot.subtitle = element_text(size = 10))+
+  theme(axis.title.x = element_text(size = 10))
+
+  
+fig2 <- nba %>% 
+  ggplot(aes(x=RX3P)) +
+  geom_histogram(bins=25,
+                 color="black",
+                 fill="lightblue") +
+  theme_bw() +
+  xlab("Ratio of Successful and
+       Attempted Three Pointers
+       (RX3P)") +
+  ylab("Frequencies")+
+  ggtitle("Ratio of Successful and
+          Attempted Free Throws
+          (RX3P)",
+          subtitle = "NBA Data") + 
+  theme(plot.title = element_text(size = 10)) + 
+  theme(plot.subtitle = element_text(size = 10)) +
+  theme(axis.title.x = element_text(size = 10))
+
+@
+
+<<plot.7, eval=FALSE, echo=FALSE>>=
+fig1 + fig2
+@
+
+\begin{figure}[H]
+\centering
+
+<<echo=FALSE, fig.dim = c(5, 3.5)>>=
+<<plot.7>>
+@
+
+\caption{A histogram of frequencies of RX2P and RX3P}
+\label{plot.7}
+\end{figure}
+
+\begin{center}
+Figure 7: Shows that \textit{Ratio of Successful and Attempted Field Goals(RX2p)} and \textit{Ratio of Successful and Attempted Free Throws (RX3P)} are normally distributed. 
+\end{center}
+
+\subsubsection{Scatter Plot Matrix}
+
+Next, we created a scatter plot matrix of all the variable in the dataset. 
+
+<<>>=
+library(GGally)
+ggpairs(nba, columns = c(5, 6:24))
+@
+
+\begin{center}
+Figure 8: A scatter plot matrix of all 12 variables (ratio)
+\end{center}
+
+This scatter plot matrix allows one to see all the variables all at once alongside the correlation between variables.
+
+\newpage
+\section{Methods}
+
+\subsection{Full First Order Model}
+This section involves generating a complete first-order linear model as a reference point. The model assumptions are evaluated, and a summary of the model is presented, followed by conducting a type 2 ANOVA test and constructing residual plots.
+
+<<>>=
+nba.model1 <- lm(W ~ PTS + oppPTS + FG +
+                   FGA + X2P + X2PA + X3P +
+                   X3PA + FT + FTA + ORB + DRB +
+                   AST + STL + BLK + TOV,
+                 data = nba)
+summary(nba.model1)
+@
+
+<<>>=
+nba.model1 <- lm(W ~ PTS + oppPTS + FG +
+                   FGA + X2P + X2PA + FTA + 
+                   ORB + DRB +
+                   AST + STL + BLK + TOV,
+                 data = nba)
+summary(nba.model1)
+@
+From the regression model above, the estimated (fitted) linear regression equation is 
+\begin{center}
+$$\widehat{Y}$$ =38.4570895 + 0.0320387(PTS) -0.0311545(oppPTS) - 0.0073013(FG) + 0.0007056(FGA) + 0.0081818(X2P) - 0.0030590(X2PA) - 0.0010690 (FTA) + 0.0019638(ORB) + 0.0026881(DRB) + 0.00122175(AST) + 0.0012109(STL) + 0.0038771(BLK) - 0.0020945(TOV)
+\end{center}
+This is a preliminary model and the assumptions for Multiple Linear Regression have not yet been assessed. 
+
+<<>>=
+library("car")
+Anova(nba.model1, type = 2)
+@
+
+
+
+\subsection{Assessing Assumptions}
+
+We are now going to assess the assumptions for a multiple linear regression model, the assumptions that we are going to measure are for the first model that was shown earlier. Assessing assumptions in a multiple linear regression is important because it helps one to interpret data. A data set either fully meets the assumptions,not fully satisfies assumptions or not meet assumptions. Depending on how the assumptions are answered it determines how one interprets the data. 
+
+\subsubsection{Linear Relationship}
+
+The first assumption is that there is a linear relationship between the explanatory variable and the response variable. In order to assess this assumption a scatter matrix plot was generated in order to check linear relationship.
+
+<<>>=
+library(GGally)
+ggpairs(nba, columns = c(4:20))
+@
+
+\begin{center}
+Figure 9: Scatter Matrix plot with W
+\end{center}
+
+The scatter plot matrix above shows that their is a linear relationship within variables. 
+
+\subsubsection{Constant Error Variance}
+
+The second assumptions is that residuals have a constant variance $\sigma^2$. To test this assumption we will generate different plots to check variance. 
+
+<<>>=
+library("qqplotr")
+source("https://cipolli.com/students/code/plotResiduals.R")
+plotResiduals(nba.model1)
+@
+
+\begin{center}
+Figure 10: Residual diagnostic plots for the first order model.
+\end{center}
+
+Looking at Figure 10, we can determine that residuals (errors) have constant variance. Even though there is test that we could run to assess the constant variance assumptions, these test usually reject the variance assumptions when ran. The residuals are scattered with any pattern allowing there be constant variance.  
+
+\subsubsection{Residuals are Normal}
+
+The third assumption is that the errors(residuals) are approximately Gaussian distributed with mean 0. We will again use Figure 10 but this time focus on Gaussian Quantilnes which has Q-Q plot, we can see it meets normality. 
+
+\subsubsection{Residuals are Independent}
+
+The fourth assumption is that the errors (residuals) are independent. We addressed this assumption earlier because some variables were highly correlated with one another. To avoid this high correlation we decided to ratio the two variables because they are both dependent to each other. The more points scored the higher points attempted will be. For the rest of the variables, we can determine that they are independent because they do not have high correlation with other explanatory variables. 
+
+\subsubsection{Representative Sample}
+
+The fifth assumption is that the sample is representative which is assessed on how the data was collected. Even though the data collected on each team is not necessarily random, the game it self is random making the data representative. 
+
+\subsubsection{Multicollinearity}
+
+The last assumption is that no multicollinearity exist between the independent variable. To assess this assumption, we will calculate Variance Inflation Factors (VIF's) for every explanatory variables. 
+
+<<>>=
+vif(nba.model1)
+@
+
+Rule of thumb of measuring multicollinearity is that  higher the number, higher the multicollinearity and  lower the number, lower the multicollinearity is. If a variable has a multicollinearity of one it means that there is no multicollinearity.
+
+After 
+\subsection{Transformation}
+
+We decided to center and scale all of the variables so they can all be on the same playing field. Since center and scale makes every variable to have the same unit i.e, standard deviation, it makes it easier to compare parameters. 
+
+<<>>=
+nba.model2 <- lm(scale(W, center = T, scale = T) ~
+                   scale(PTS, center = T, scale = T) +
+                   scale(oppPTS, center = T, scale = T) + 
+                   scale(RFG, center = T, scale = T)+
+                   scale(RX3P, center = T, scale = T) +
+                   scale(RX2P, center = T, scale = T)+
+                   scale(RFT, center = T, scale = T) +
+                   scale(ORB, center = T, scale = T) +
+                   scale(DRB , center = T, scale = T) +
+                   scale(AST, center = T, scale = T) +
+                   scale(STL, center = T, scale = T) +
+                   scale(BLK, center = T, scale = T) +
+                   scale(TOV, center = T, scale = T),
+                 data = nba)
+summary(nba.model2)
+@
+
+Now that the model has been centered and scaled, we will now compare R-Squared, Adjusted R-Squared, and RSE from the original model. 
+
+In the new model, there is a slight improvement with the R-Squared and RSE values. In the transformation model we have a higher R-Squared and a lower RSE but a higher Adjusted R-Squred. 
+
+<<>>=
+library("qqplotr")
+source("https://cipolli.com/students/code/plotResiduals.R")
+plotResiduals(nba.model2)
+@
+\begin{center}
+Figure 11: Residual diagnostic plots for scaled and centered model.
+\end{center}
+
+In Figure 11, the residual plots are very similar to one another meaning that the data in the first model is pretty good since not much changed.
+
+<<>>=
+library(GGally)
+ggpairs(nba, columns = c(5, 6, 15:24))
+@
+
+\begin{center}
+Figure 12: Scatter plot Matrix of scaled and centered data
+\end{center}
+
+Figure 12: Shows the linear relationship with other centered and scaled independent variables alongside with the ratio variables. 
+
+We also added a VIF figure to compare the difference between the original dataset and the one with centered and scaled data with ratios.
+
+<<>>=
+vif(nba.model2)
+@
+
+We noticed that the multicollinearity for all of the variable drastically decreased with the highest collinearity being at 23 now instead of 750. 
+
+\subsection{Removing Faulty Data}
+
+We decided to refit the regression model and take out the variable of \textit{RFG} and \textit{RX2P}
+
+<<>>=
+nba.model3 <- lm(scale(W, center = T, scale = T) ~ 
+                   scale(PTS, center = T, scale = T) +
+                   scale(oppPTS, center = T, scale = T) + 
+                   scale(RX3P, center = T, scale = T) +
+                   scale(RFT, center = T, scale = T) + 
+                   scale(ORB, center = T, scale = T) +
+                   scale(DRB , center = T, scale = T) +
+                   scale(AST, center = T, scale = T) +
+                   scale(STL, center = T, scale = T) + 
+                   scale(BLK, center = T, scale = T) +
+                   scale(TOV, center = T, scale = T),
+                 data = nba)
+summary(nba.model3)
+@
+
+<<>>=
+Anova(nba.model3, type = 2)
+@
+
+When we compared the R-Square, Adjusted R-Square, and RSE we noticed that the scores were not as good as the second model and were slightly a bit lower in R-Square and Adjusted R-Square and higher in RSE. Even though, the values are not as good as Model 2 the VIF scores is much better for every variable.
+
+\subsection{Reassessing Assumptions}
+
+We will now reassess the assumptions with the previous model shown. 
+
+\subsubsection{Linear Relationship}
+
+The first assumption is that there is a linear relationship between each quantitative independent variable and the response variable. In order to assess this assumption a scatter plot was generated. 
+
+<<>>=
+library(GGally)
+ggpairs(nba, columns = c(5, 6, 15:19, 20, 23, 24))
+@
+
+\begin{center}
+Figure 13: Scatter Plot for Model 3
+\end{center}
+
+We see that there is a linear relationship between the variables.
+
+\subsubsection{Constant Error Variance}
+
+The second assumptions is that residuals have a constant variance. To test this assumption we will generate different plots to check variance.
+
+<<>>=
+plotResiduals(nba.model3)
+@
+
+Looking at Figure 14 we can determine that residuals (errors) have constant variance. Even though, there’s test that we could run to assess the constant variance assumptions, these test usually reject the variance assumptions when ran. The residuals are scattered with any pattern allowing there be constant variance.
+
+\subsubsection{Residuals are Normal}
+
+The third assumption is that the errors(residuals) are approximately Gaussian distributed with mean 0. We will again use Figure 10 but this time focus on Gaussian Quantilnes which has Q-Q plot, we can see it meets normality.
+
+\subsubsection{Residuals are Independent}
+
+The fourth assumption is that the errors (residuals) are independent. We center and scaled the variables so that we can interpret the data easier. We also removed \textit{RFG} because it had a very high multicollinearity. 
+
+\subsubsection{Representative Sample}
+
+The fifth assumption is that the sample is representative which is assessed on how the data was collected. Even though, the data collected on each team is not necessarily random but the game it self is random making the data representative.
+
+\subsubsection{Multicollinearity}
+
+We again use VIF to assess the multicollineartity assumption. 
+
+<<>>=
+vif(nba.model3)
+@
+
+The multicollinearity for the variables is the best than it has been for any previous models. The highest multicollinearity is at 6.9 which is slightly high collinearity but it has being the best we have seen. The rest of the variables have moderate multicollinearity.
+
+
+\subsection{Model Selection}
+
+We are taking nba.model3 as our model because it doesn't have multicollinearity and good adjusted R-squared. The coefficients are rounded to 4 decimal places for the summary of the regression coefficients.
+
+<<>>=
+nba.best <- lm(W ~ PTS + oppPTS + 
+                  RX3P +RFT + ORB + DRB +
+                  AST + STL + BLK + TOV,
+                data = nba)
+round(summary(nba.best)$coefficients,4)
+@
+
+We performed a best subset selection based on AIC (Akaike Information Criterion) where the TopModels argument specifies the maximum number of top models to output (which is 5 in our case).
+
+<<>>=
+library("bestglm")
+y <- nba$W
+x <- model.matrix(nba.best) [,-1]
+xy <- as.data.frame(cbind(x,y))
+best.subsets.aic <- bestglm(xy, IC = "AIC", TopModels = 5)
+@
+
+<<>>=
+best.subsets.aic$BestModel
+@
+
+<<>>=
+summary(best.subsets.aic$BestModel)
+@
+
+By examining the summary output, we can see the predictor variables that were included in the best model based on AIC. These variables are the ones that were deemed to have the strongest association with the response variable "W" based on the AIC value.
+
+<<>>=
+library("leaps")
+regsubset.out <- regsubsets(W ~ PTS + oppPTS + 
+                    RX3P +RFT + ORB + DRB +
+                   AST + STL + BLK + TOV,
+                 data = nba, nbest = 1)
+
+as.data.frame(summary(regsubset.out)$outmat)
+
+@
+
+We use "leap" package to perform a best subset selection of the predictor variables for predicting the response variable "W". The regsubsets function is used to perform the best subset selection, where the nbest argument is set to 1 to select the best subset of predictor variables based on R-squared value.
+
+<<>>=
+fit.stats <- data.frame(num.variables = 1:8,
+                        adjr2 = summary(regsubset.out)$adjr2,
+                        bic = summary(regsubset.out)$bic)
+fit.stats
+@
+
+The "adjr2" column contains the adjusted R-squared values for each model. The adjusted R-squared is a modification of the regular R-squared that takes into account the number of predictor variables in the model. The "bic" column contains the Bayesian information criterion (BIC) values for each model. The BIC is a measure of the goodness of fit of a statistical model, adjusted for the number of predictor variables. It is similar to the AIC but places a greater penalty on models with more predictor variables. It is better to have higher ADJIR2 value and lower BIC value. By creating this data frame, we can identify the optimal number of predictor variables to include in the model based on these criteria. 
+
+<<>>=
+which.min(summary(regsubset.out)$bic)
+min(summary(regsubset.out)$bic)
+coef(regsubset.out, 4)
+@
+
+According to BIC, the best model is with the variables PTS, oppPTS, BLK and DRB.
+
+<<>>=
+which.max(summary(regsubset.out)$adjr2)
+max(summary(regsubset.out)$adjr2)
+coef(regsubset.out, 5)
+@
+
+According to ADJR2, the best model is with the variables PTS, oppPTS, BLK, AST and DRB.
+
+\subsection{Cross Validation}
+
+Cross-validation is done to assess the performance of a statistical model and to evaluate its ability to generalize to new data. Cross-validation can be used to to select the best model from a set of candidate models. By evaluating the performance of different models on multiple independent samples of data, we can select the model with the best performance on average, which is likely to generalize well to new data.
+
+<<>>=
+library(caret)
+specs <- trainControl(method = "CV",number = 10)
+@
+
+<<>>=
+model.2 <- train(W ~ PTS + oppPTS + BLK,
+                 data = nba,
+                 method = "lm",
+                 trControl = specs,
+                 na.action = na.omit)
+model.2
+
+model.3 <- train(W ~ PTS + oppPTS + BLK + DRB,
+                 data = nba,
+                 method = "lm",
+                 trControl = specs,
+                 na.action = na.omit)
+
+model.3
+
+model.4 <- train(W ~ PTS + oppPTS + BLK + DRB + AST,
+                 data = nba,
+                 method = "lm",
+                 trControl = specs,
+                 na.action = na.omit)
+
+model.4
+@
+
+We performed 10-fold cross-validation on three different linear regression models (model.2, model.3, and model.4) that predict the number of wins in the NBA based on different combinations of predictor variables.We got summary of the model performance, including the mean squared error (MSE) and the R-squared value (Rsquared) averaged over the 10 cross-validation folds. Model.2 and Model.3 has very similar R-squared, MSE and MAE but Model.3 is slightly better than Model.2. So, we will use PTS, oppPTS, DRB and BLK as our predictive variables for our prediction of win.
+
+\subsection{Influence Analysis}
+
+We used influence analysis to identify and investigate the potential impact of outliers or high leverage observations on the results of a statistical model.
+
+\subsubsection{Leverage Values}
+<<>>=
+leverage <- nba %>% mutate(h.values = hatvalues(nba.model3))
+p <- 11
+n <- nrow(nba)
+high.leverage <- leverage %>% filter(h.values > 2*p/n)
+nrow(high.leverage)
+very.high.leverage <- leverage %>% filter(h.values > 3*p/n)
+nrow(very.high.leverage)
+
+@
+
+This variable contains the hat values, which are the diagonal elements of the "hat matrix" that maps the observed response variable to the predicted values based on the predictor variables in the model. The second line of code sets the number of predictor variables p to 11 (based on the number of predictors in nba.model3). We calculated the leverage of each observation in a linear regression model, which measures how much an individual observation contributes to the fit of the model. High-leverage observations can potentially have a large influence on the estimated regression coefficients and can affect the overall performance of the model, so it is important to identify and investigate them.
+
+\subsubsection{Outliers}
+
+<<>>=
+new.residuals <- nba %>% mutate(stdres = rstandard(nba.model3), studres = rstudent(nba.model3))
+strong.outliers.stdres <-new.residuals %>% filter(abs(stdres)>3)
+nrow(strong.outliers.stdres)
+strong.outliers.studres <-new.residuals %>% filter(abs(studres)>3)
+nrow(strong.outliers.studres)
+@
+
+\subsubsection{Influencial Data Points}
+<<>>=
+cooks.values <- nba %>% mutate(cooks = cooks.distance(nba.model3))
+cooks.strong <- cooks.values %>% filter(cooks>1)
+nrow(cooks.strong)
+@
+
+
+
+\subsection{Regression Results}
+\subsubsection{Research Questions}
+
+\begin{enumerate}
+  \item \textbf{What are the variables to predict the win in a game?}
+ 
+Based on the dataset, we developed a linear model to predict the number of wins using all available variables. We filtered out irrelevant data and addressed multicollinearity issues before performing model selection. To assess the model's performance, we conducted cross-validation and ultimately identified the best-performing model.
+<<>>=
+final.model <- lm(W ~ PTS + oppPTS + BLK + DRB, data = nba)
+summary(final.model)
+@
+
+  \item \textbf{Is there evidence of multicollinearity among the variables??}
+  
+\end{enumerate} 
+ 
+
+
+\textcolor{orange}{Wins = 0.0323780 * PTS + -0.0324730 * oppPTS + 0.0039443 * BLK + 40.1389267 + 0.0016853 * DRB}
+\normalcolor
+
+
+In our initial model, we observed a significant degree of collinearity among several variables such as X2P and X2PA, FG and FGA, X3P and X3PA, and FT and FTA.
+
+<<>>=
+vif <- vif(nba.model1)
+barplot(vif, main = "VIF Values", horiz = TRUE, col = "orange")
+abline(v = 7, lwd = 3, lty = 2)
+@
+
+To address this issue, we calculated ratios and created a new variable, but multicollinearity persisted between RX2P, RFG, and PTS.
+
+<<>>=
+vif <- vif(nba.model2)
+barplot(vif, main = "VIF Values", horiz = TRUE, col = "orange")
+abline(v = 7, lwd = 3, lty = 2)
+@
+
+
+As RX2P and RFG were strongly correlated with PTS, we decided to eliminate them, which helped us to eliminate multicollinearity in the model.
+
+<<>>=
+vif <- vif(nba.model3)
+barplot(vif, main = "VIF Values", horiz = TRUE, col = "orange", xlim = c(0, 15))
+abline(v = 7, lwd = 3, lty = 2)
+@
+
+
+\subsubsection{Model Interpretations}
+
+During the initial phase of our linear model, we noticed that there were some variables such as \textit{X2P and X2PA, FG and FGA, X3P and X3PA, and FT and FTA} that had a high degree of correlation among them. This multicollinearity issue can cause problems in regression analysis as it can lead to unstable and unreliable coefficients. To tackle this issue, we calculated ratios for the variables that were highly correlated and created a new variable. However, even after doing so, the multicollinearity issue persisted, particularly between \textit{RX2P, RFG, and PTS.}
+
+To resolve this problem, we decided to remove the RX2P and RFG variables, which were strongly correlated with PTS. This helped us to eliminate multicollinearity in the model, as these variables were no longer creating any overlap with the other predictor variables. We checked the correlation matrix plot multiple times to ensure that we have eliminated the multicollinearity problem and obtained reliable results.
+
+After eliminating the problematic variables, we found a good correlation value between points scored and opponent points scored, which is natural in a basketball game. Although the correlation is high, it doesn't pose a concern for our model interpretation, as the score of the game is directly related to the opponent's score, and it's an essential factor to consider when analyzing a basketball game.
+
+In summary, our initial model had a problem with multicollinearity among predictor variables, and we had to take several steps to eliminate it. We created new variables by calculating ratios and ultimately removed the highly correlated variables to ensure the reliability of our regression coefficients. Although there is a high correlation between points scored and opponent points scored, we decided to keep it in our model as it is an important factor to consider in basketball games.
+
+
+
+\section{Conclusion}
+
+In conclusion, to create a multiple linear regression model to predict the win for a team in basketball, we had to carefully examine and analyze the provided dataset. We encountered a problem of multicollinearity among some predictor variables, which we resolved by calculating ratios and removing highly correlated variables. This ensured the reliability of our regression coefficients and the overall model.
+
+The process of building the multiple linear regression model involved trial and error as we had to make several attempts to obtain the perfect model. We had to explore and understand the data and propose research questions that motivated our analysis. The insights gained from the model can be significant in understanding the factors that lead to the win of a basketball game.
+
+Data analytics plays a crucial role in sports, and our study highlights the importance of using statistical methods to analyze the data and gain insights into the game's dynamics. The model can be a useful tool for coaches and team managers to analyze the team's performance and make informed decisions based on the factors that contribute to the team's win. Overall, our study demonstrates the potential of data analytics in sports and its importance in decision-making processes.
+
+\end{document}
