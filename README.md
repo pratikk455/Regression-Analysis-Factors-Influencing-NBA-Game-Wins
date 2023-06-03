@@ -20,4 +20,4 @@ Key Features:
 
 Through this repository, NBA enthusiasts, analysts, and researchers can gain valuable insights into the factors that influence NBA games, paving the way for data-driven decision-making, performance improvement, and strategic planning. The code, documentation, and example datasets are readily available, empowering users to replicate and extend the analysis for their specific needs.
 
-Note: The analysis in this repository is based on NBA basketball game data available up until September 2021.
+Note: The analysis in this repository is based on NBA basketball game data available up until September 2011.
